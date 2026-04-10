@@ -1,0 +1,409 @@
+📁 PROJECT_STRUCTURE.md
+
+(aktuální stav projektu Melody4U – leden 2026)
+
+1️⃣ Přehled architektury (high-level)
+
+Projekt Melody4U je rozdělen do tří hlavních částí:
+
+FORPSI hosting – statický výstup React aplikace (produkce)
+
+Frontend (React + Vite) – vývojový zdroják UI
+
+Backend API (Node.js / Express) – logika, Stripe, audio, DB, storage
+
+Každá část má jasnou roli a nesmí se míchat.
+
+2️⃣ FORPSI – produkční hosting (statické soubory)
+
+FORPSI NEOBSAHUJE zdrojový kód
+Je to pouze výstup z vite build
+
+/www
+├── index.html
+├── vite.svg
+└── assets/
+    ├── index-Bag6NZ3K.css
+    └── index-d1y_5_mB.js
+
+🟩 Demo obsah pro Homepage (Ukázky přání)
+
+Na homepage je sekce „Ukázky přání“, která slouží pouze jako vizuální + zvuková ukázka (UI-only).
+Demo MP3 soubory NEJSOU součástí GitHub repozitáře melody4u-react (necommitují se).
+
+Důvod:
+- GitHub upload / limity / správa binárních souborů
+- Demo audio je statický obsah vhodný přímo pro FORPSI hosting
+
+FORPSI /www (produkce) obsahuje navíc složku:
+
+/www
+├── index.html
+├── vite.svg
+├── assets/
+│   ├── index-Bag6NZ3K.css
+│   └── index-d1y_5_mB.js
+└── demo/
+    ├── mami.mp3
+    ├── kamarad.mp3
+    ├── milacku.mp3
+    └── deda70.mp3
+
+Pravidlo:
+- /www/demo/* se nahrává ručně na FORPSI (nepřes GitHub)
+- Frontend odkazuje na tyto soubory relativně jako: /demo/<soubor>.mp3
+- Demo sekce nemá žádnou vazbu na CORE/platby/DB (read-only prezentace)
+
+Význam
+
+FORPSI web = pouze public UI
+
+Nesmí obsahovat business logiku
+
+Neřeší Stripe ani DB
+
+🔒 Pravidlo SPA routingu na FORPSI (HashRouter)
+
+FORPSI je statický hosting bez server-side rewrite → přímé URL jako /create vrací 404. 
+
+PROJECT_STRUCTUREv1
+
+Produkce musí používat HashRouter routing:
+
+správně: /#/create, /#/p/<id>
+
+špatně: /create, /p/<id>
+
+V UI je zakázáno používat <a href="/create"> nebo window.location="/create".
+Používej pouze:
+
+<Link to="/create"> (React Router), nebo
+
+window.location.href="/#/create" (jen v krajním případě).
+
+3️⃣ Backend API – melody4u-api (Render)
+
+Repozitář: melody4u-api (Private)
+Běží na Render
+
+melody4u-api/
+├── server.js
+├── storage.js
+├── stripe.js
+├── db.js
+├── package.json
+└── routes/
+
+Řeší:
+
+Stripe payments
+
+Audio mixing / render
+
+Tokeny / play count
+
+DB zapisování (Turso)
+
+Storage upload (B2 / R2)
+
+Přístup k DB (Turso)
+
+Přístup ke storage (B2 / R2 – S3 kompatibilní)
+
+Klíčové endpointy:
+
+/upload – upload hlasu / hudby
+
+/render – mix hlas + hudba
+
+/share – vytvoření free odkazu
+
+/p/:id – přehrání s odečtem
+
+4️⃣ Frontend – melody4u-react (React + Vite)
+
+Repozitář: melody4u-react (Private)
+
+│
+├── .github/
+│   └── workflows/
+│       └── build-dist.yml               # CI build Reactu
+│
+├── public/
+│   └── vite.svg
+│
+├── src/
+│   │
+│   ├── assets/
+│   │   ├── hero/                        # Hero vizuály (homepage)
+│   │   │   ├── gradient.css
+│   │   │   ├── particles.webp
+│   │   │   ├── wave.svg
+│   │   │   └── noise.webp
+│   │   │
+│   │   ├── icons/                       # UI ikony
+│   │   ├── illustrations/               # ilustrace / promo grafika
+│   │   ├── misc/                        # ostatní assety
+│   │   └── react.svg                    # default Vite asset (legacy)
+│   │
+│   ├── components/
+│   │   ├── HowItWorks.jsx               # Sekce „Jak to funguje (3 kroky)“
+│   │   ├── SampleCard.jsx               # Karta ukázky (audio play/pause)
+│   │   ├── SamplesSection.jsx           # Ukázky přání (UI-only)
+│   │   ├── TrustAndLegal.jsx            # Sekce „Důvěra & legální info“
+│   │   ├── WhenToUse.jsx                # Sekce „Kdy se to hodí“
+│   │   ├── WhyMelody4U.jsx              # Sekce „Proč Melody4U“
+│   │   └── CookieConsent.jsx            # Cookie lišta (EU / GDPR compliant)
+│   │
+│   ├── pages/
+│   │   ├── Homepage.jsx                 # landing + ceník
+│   │   ├── SharePage.jsx                # přehrání přání
+│   │   ├── PrivacyPage.jsx              # GDPR – ochrana osobních údajů
+│   │   ├── TermsPage.jsx                # Obchodní podmínky
+│   │   ├── CookiesPage.jsx              # Cookies – informace
+│   │   ├── ContactPage.jsx              # Kontakt
+│   │   │
+│   │   └── create/                      # ✅ Create flow je modularizovaný
+│   │       ├── CreatePage.jsx           # orchestrátor Create flow (DEFAULT export!)
+│   │       │
+│   │       ├── components/
+│   │       │   ├── Stepper.jsx          # stepper UI (aktivní krok = styl jako tlačítko)
+│   │       │   └── AudioPreview.jsx     # jednotný audio player (preview)
+│   │       │
+│   │       ├── lib/
+│   │       │   ├── api.js               # API helpery (upload/render/share/complete)
+│   │       │   └── audio.js             # helpery (duration, recorder mime, format)
+│   │       │
+│   │       └── steps/
+│   │           ├── StepVoice.jsx        # krok 1: hlas (mikrofon XOR soubor)
+│   │           ├── StepMusic.jsx        # krok 2: hudba
+│   │           └── StepFinish.jsx       # krok 3: vytvořit + progress + debug details
+│   │
+│   ├── App.jsx                          # router + layout (header / footer)
+│   ├── main.jsx                         # bootstrap Reactu
+│   ├── App.css
+│   ├── index.css
+│   └── styles.css
+│
+├── index.html                           # HTML shell
+├── vite.config.js
+├── package.json
+└── README.md
+
+🧨 POZNÁMKY (tohle si tam přidej hned pod strukturu)
+1) Pravidlo: jen jeden CreatePage „zdroj pravdy“
+
+src/pages/create/CreatePage.jsx je jediný CreatePage pro produkci.
+
+src/pages/CreatePage.jsx nesmí existovat (jinak CI/build často importuje špatný soubor).
+
+2) Zakázané “kopie” soubory v src/pages/
+
+CreatePage - kopie*.jsx musí pryč (nebo do src/_archive/ mimo build).
+
+Jinak se dřív nebo později stane:
+
+špatný import v App.jsx
+
+nebo build error typu “default is not exported”.
+
+3) App.jsx import (kritické)
+
+App importuje Create jen takhle:
+
+import CreatePage from "./pages/create/CreatePage.jsx";
+
+4) Routing (FORPSI / HashRouter)
+
+všechny odkazy používat přes router (Link, navigate), ne href="/create"
+(aby to na hostingu bez server-side routes nepadalo)
+
+Poznámka:
+- Komponenty homepage jsou izolované (UI-only) a nesmí zasahovat do CORE logiky.
+- Demo MP3 nejsou v repozitáři, ale hostují se na FORPSI v /www/demo.
+
+5️⃣ Stránky (React – src/pages)
+
+Homepage.jsx
+
+Hero sekce
+
+Popis služby
+
+Ceník: Free / Standard / VIP
+
+Stripe checkout (Standard / VIP)
+
+Přesměrování na CreatePage
+
+CreatePage.jsx
+
+Nahrávání hlasu (mic / soubor)
+
+Volba hudby
+
+Spuštění renderu (POST /render)
+
+Získání výsledného MP3 + share link
+
+SharePage.jsx
+
+Přehrání audia
+
+Volá /p/:id
+
+Řeší omezení přehrání
+
+6️⃣ CI / Build proces
+GitHub Actions – build-dist.yml
+
+Build React aplikace
+
+Výstup: /dist
+
+Tento výstup se ručně / skriptem nahrává na FORPSI
+
+7️⃣ Databáze (Turso – SQLite)
+
+Tabulky:
+
+shares – každý vytvořený share link
+
+plays – log přehrání
+
+users – uživatelé (zatím minimální)
+
+subscriptions – členství
+
+stripe_orders – Stripe log
+
+8️⃣ Co ZATÍM NENÍ (vědomě chybí)
+
+Admin panel
+
+Klasická registrace / login (teď se připravuje)
+
+Automatické nahrávání buildů na FORPSI
+
+Plnohodnotný CMS
+
+9️⃣ Základní pravidla projektu
+
+FORPSI = jen build
+
+React repo = UI a UX
+
+API repo = pravda, logika, peníze
+
+Žádná duplicita logiky
+
+Každá nová věc → doplnit sem
+
+✔️ Tento soubor je referenční pravda projektu
+
+
+10️⃣ Backend (melody4u-api) – Render ENV + DB poznámky (doplněk)
+
+Backend (melody4u-api) – Render ENV
+
+Hosting: Render
+Service: melody4u-api
+BASE_URL: https://melody4u-api.onrender.com (důležité pro redirecty a linky)
+
+Povinné (runtime)
+
+PORT = 10000
+...
+
+Povolené origins (CORS)
+
+ALLOWED_ORIGINS = https://melody4u.cz, https://www.melody4u.com, https://melody4u.cz
+
+FRONT
+...
+
+created_at – vytvoření share
+
+Poznámka:
+Backend musí počítat remaining = max_plays - used_plays.
+Sloupec remaining_plays v DB neexistuje (legacy chyba).
+
+Tabulka: tickets (play protection)
+
+Jednorázové / časově omezené tokeny pro přehrání audia.
+
+chrání /p/:id proti opakovanému zneužití
+
+váže přehrání na IP / UA
+
+umožňuje expirační logiku
+
+Tabulka: stripe_orders
+
+Log Stripe checkout session.
+
+není přímá vazba na shares
+
+slouží pouze jako audit a stav platby
+
+Tabulka: checkouts
+
+Legacy / pomocná tabulka Stripe flow
+(Není kritická pro běh aplikace)
+
+🎨 Hero Background (produkce)
+
+- Produkční background je soubor `src/assets/hero/purple-bg-4k.png`.
+- Aplikuje se globálně v `src/styles.css` přes `html::before` (obrázek) + `html::after` (glow/grade).
+- Přechody mezi sekcemi jsou řešené čistě CSS (Hero `::after` + Section `::before`) – nesahá do CORE.
+- Pravidlo: background/overlay se ladí pouze ve `styles.css`, ne v komponentách.
+
+🎨 Pravidla pro styly (kritické)
+
+src/styles.css je JEDINÝ vstup
+
+Obsahuje pouze @import
+
+Styly se nikdy neupravují v buildu
+
+Pořadí souborů je závazné
+
+design.css = LAB (nesmí rozbít produkci)
+
+
+Poznámka k aktuálním změnám (UI / struktura)
+
+Během posledních iterací proběhlo větší množství vizuálních a layoutových úprav homepage (zarovnání sekcí, spacing mezi nadpisy a obsahem, rozložení prvků do řádků).
+
+Tyto změny NEZASAHUJÍ do projektové struktury, architektury ani odpovědností jednotlivých částí (assets / components / pages zůstávají beze změny).
+
+Struktura složek zůstává platná a referenční, viz strom výše – žádný soubor nebyl přesunut, přejmenován ani logicky změněn.
+
+Veškeré úpravy se týkaly pouze CSS (styles.css) a vizuální kompozice komponent.
+
+Z tohoto důvodu nebyla struktura projektu aktualizována, pouze byla změna zaznamenána v PROJECT_HISTORY.
+
+Další úpravy layoutu budou i nadále řešeny bez zásahů do struktury, dokud nebude výslovně rozhodnuto jinak.
+
+## Právní a compliance vrstva (Legal & Trust)
+
+Projekt Melody4U obsahuje povinné právní stránky z důvodu:
+- práce s osobními údaji (uživatelé, e-maily)
+- přihlášení / účtů
+- plateb (Stripe)
+- cookies a analytiky
+
+Tyto stránky jsou:
+- statické obsahové stránky
+- nezasahují do CORE, FLOW ani backend logiky
+- jsou přístupné pouze přes footer
+
+Povinné stránky:
+- /terms – Obchodní podmínky
+- /privacy – Ochrana osobních údajů (GDPR)
+- /cookies – Informace o cookies
+
+Pravidla:
+- žádná z těchto stránek nesmí volat API
+- žádná z těchto stránek nesmí měnit stav aplikace
+- slouží výhradně k právnímu a důvěrovému krytí projektu

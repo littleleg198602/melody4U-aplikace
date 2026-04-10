@@ -1,0 +1,765 @@
+Melody4U – PROJECT HISTORY
+
+Dokument: PROJECT_HISTORY.txt
+Účel: Historický záznam vývoje projektu (audit / paměť)
+Vazba: PROJECT_BOARD.txt, MANIFEST_MELODY4U v1.1
+
+--------------------------------------------------
+🧭 FÁZE 0 – MYŠLENKA A SMĚR
+--------------------------------------------------
+(2025 Q3)
+
+- Definován základní smysl projektu Melody4U:
+  osobní hudební dárek (hlas + hudba + emoce).
+- Odmítnut přístup „technologická hračka“.
+- Stanoven cíl: jednoduchý produkt, za který jsou lidé ochotni zaplatit.
+- Vznik prvních náčrtů flow uživatele (rychlé pochopení, minimum kroků).
+
+--------------------------------------------------
+🏗 FÁZE 1 – ARCHITEKTURA A ZÁKLAD
+--------------------------------------------------
+(2025 Q4)
+
+- Rozhodnutí pro webovou aplikaci (FE + BE).
+- Návrh architektury:
+  - Frontend (CreatePage, SharePage)
+  - Backend API (Node / Express)
+  - Render pipeline (FFmpeg)
+  - Storage (S3 kompatibilní)
+  - DB (Turso / libsql)
+- Zavedení modelu CORE / FLOW / LAB.
+- Vznik prvního funkčního:
+  Create → Render → Share (bez plateb).
+
+--------------------------------------------------
+💳 FÁZE 2 – MONETIZACE
+--------------------------------------------------
+(2025 Q4)
+
+- Integrace Stripe:
+  - checkout
+  - návrat z platby
+  - vazba platby na výstup
+- Zavedení tarifů podle počtu přehrání.
+- První verze modelu `remaining_plays`.
+
+Poučení:
+- `remaining_plays` jako jediná hodnota nestačí
+  → později nahrazeno modelem `max_plays + used_plays`.
+
+--------------------------------------------------
+🔄 FÁZE 3 – SHARE & PLAYBACK REFAKTOR
+--------------------------------------------------
+(2025 Q4 / 2026-01)
+
+- Přepracování SharePage:
+  - oddělení načtení stavu (GET /api/p/:id)
+  - oddělení akce přehrání (/consume)
+- Zavedení ticket-based přehrávání:
+  - každé přehrání = nový ticket
+  - server-side kontrola
+- Oprava DB modelu:
+  - max_plays
+  - used_plays
+  - remaining = výpočet
+
+Důvod:
+- ochrana proti refresh
+- ochrana proti opakovanému play
+- kontrola hodnoty pro placený obsah
+
+--------------------------------------------------
+🔐 FÁZE 4 – ZABEZPEČENÍ A ZAMČENÍ CORE
+--------------------------------------------------
+(2026-01)
+
+- Implementace jednorázových ticketů:
+  - /api/t/:token
+  - po použití → 410
+- Zamčení UI po vyčerpání přehrání:
+  - tlačítko Přehrát disabled
+  - player nelze zneužít
+- Ověření reálným testem (Network / UI).
+
+Výsledek:
+- CORE playback je stabilní a bezpečný.
+- Tato část je označena jako STABLE / NESAHAT.
+
+--------------------------------------------------
+🧾 SOUČASNÝ STAV
+--------------------------------------------------
+(05. 01. 2026)
+
+- Projekt je:
+  - funkční
+  - monetizovatelný
+  - stabilní
+- BUG LIST je záměrně prázdný.
+- Další práce jsou:
+  - preventivní (TO-DO)
+  - nebo LAB / vizuální rozšíření.
+
+--------------------------------------------------
+🖥 FÁZE 5 – HOMEPAGE STRUKTURA & UX STABILIZACE 08.01.2026
+--------------------------------------------------
+(2026-01)
+
+- Rozdělení Homepage do samostatných FE komponent:
+  - WhyMelody4U
+  - HowItWorks
+  - SamplesSection / SampleCard
+  - WhenToUse
+  - TrustAndLegal
+
+- Ukázky přání:
+  - pouze demo audio (statické MP3)
+  - žádná vazba na CORE playback
+  - cílem je pouze vizuální a emoční ukázka výsledku
+
+- Oprava UX chování ukázek:
+  - vždy může hrát pouze jedno audio
+  - při spuštění nové ukázky se předchozí automaticky zastaví
+
+- Právní a důvěrové informace:
+  - přesunuty z footeru do samostatné sekce „Důvěra & legální info“
+  - footer zůstává minimalistický (odkazy + copyright)
+
+- Rozhodnutí:
+  - TrustAndLegal JE součást homepage obsahu
+  - NENÍ samostatná stránka
+  - NENÍ v hlavním footeru
+
+Výsledek:
+- Homepage je přehledná, srozumitelná a nepůsobí přeplácaně
+- CORE / SHARE / PLAYBACK zůstává beze změny (STABLE)
+
+
+FÁZE 6 – FE STABILIZACE / BUILD FIX (08.01.2026)
+
+Opravena kritická build chyba (Vite / Rollup):
+
+chybný import ./Homepage → sjednoceno na ./pages/Homepage
+
+ověřeno: lokální build + CI
+
+Stabilizována struktura:
+
+App.jsx = layout (header / footer / <Homepage />)
+
+Homepage.jsx = obsah homepage
+
+Potvrzeno:
+
+problém nebyl ve Vite / CI
+
+šlo o rozpad struktury importů během FE iterací
+
+Stav:
+
+BUILD ZELENÝ
+
+FE běží
+
+práce neukončena, pouze stabilizace podkladu
+
+FÁZE 7 – FE ROUTING INCIDENT (09.01.2026)
+
+Projevil se problém: klik na Create vedl na /create → FORPSI vracel 404, případně /#/create renderovalo Homepage.
+
+Příčina: App layout renderoval pouze Homepage bez Routes (Create route nebyla aktivní) a zároveň existovaly hardlink odkazy href="/create", které obcházely HashRouter.
+
+Náprava: ukotveno pravidlo “FORPSI = HashRouter only”, zákaz /create hardlinků, přidán regresní sanity check do FLOW a LOCK položka do BOARD.
+[FIX] Header nav styles + routing /create
+Problém nebyl v kódu, ale v nasazeném buildu a cache CSS.
+Řešení: sjednocení .nav-link (buttony), CTA logika + cache-busting kontrola.
+-------------------------------------------------
+🎨 FÁZE 7 – HOMEPAGE COPY + VERTIKÁLNÍ RYTMUS (SEKCE „PROČ“ / „JAK TO FUNGUJE“)
+--------------------------------------------------
+(2026-02)
+
+Cíl:
+- Dosadit finální texty do sekcí podle podkladů (DOCX) a doladit typografii (mezery mezi řádky a bloky), bez zásahů mimo cílové sekce.
+
+Změny / rozhodnutí:
+- Hero texty:
+  - Tagline upravena na: „Tvoje melodie, tvoje přání.“
+  - H1 změněno na: „Melody4u — daruj emoce svým hlasem“
+  - Upřesněn požadavek: text „daruj emoce svým hlasem“ má být kompaktnější a ideálně na jednom řádku (nezávislá velikost vůči „Melody4u“).
+
+- Sekce „Proč Melody4U“:
+  - Upřesnění: neřeší se šířka/roztažení, ale VERTIKÁLNÍ MEZERY (spacing) mezi řádky/bloky dle vizuálních značek (červené čárky).
+  - Potřeba přidat mezery mezi:
+    - hlavním nadpisem a podnadpisem,
+    - podnadpisem a hlavním popisem,
+    - titulkem karty a krátkým sloganem,
+    - sloganem a odstavcem v kartě (lepší čitelnost / rytmus).
+
+- Sekce „Jak to funguje“:
+  - Stejný princip jako u „Proč“: přidat jasné mezery mezi:
+    - H2 → popis,
+    - v kartách: nadpis → krátká věta → odstavec.
+
+Technická poznámka / workflow:
+- Platí pravidlo: NEzasahovat do jiných sekcí Homepage a NEměnit nesouvisející styly.
+- Odkazy typu sandbox:/mnt/data nejsou spolehlivé pro stahování → preferované je posílat celé kódy přímo do chatu.
+
+Stav:
+- Copy změny a požadavky na spacing byly definovány; následuje cílená úprava pouze sekcí „Proč“ a „Jak to funguje“ (a souvisejících CSS tříd) s kontrolou mezer mezi řádky.
+
+
+--------------------------------------------------
+🎨 FÁZE 8 – VIZUÁLNÍ EXPLORACE BACKGROUNDŮ (HERO / LAB)
+--------------------------------------------------
+(2026-01)
+
+Cíl fáze:
+- Najít a stabilizovat vizuální styl hero pozadí pro Melody4U
+- Odlišit se od generických „gradient blobů“
+- Pracovat s emocí, hloubkou a jemným pohybem světla
+
+Průběh:
+- Provedena detailní vizuální analýza referenčního hero posteru:
+  - bokeh struktura (více velikostí, nepravidelnost)
+  - vrstvení světla
+  - jemný šum (grain)
+  - růžovo–fialová paleta s tmavými okraji
+  - světelné vlny / linky jako emoční prvek
+
+- Proběhly pokusy o:
+  - čistě generované pozadí (procedurální Python skripty)
+  - gradienty, radiální masky, glow efekty
+  - simulaci bokeh pomocí náhodných kruhů
+
+Zjištění (kritické):
+- Čistě procedurální generování (bez reference) vede k:
+  - rozmazaným smouhám
+  - „šedivo-růžovým koulím“
+  - sterilnímu vzhledu bez emoční hloubky
+- Tento přístup NEVEDE k cílovému stylu Melody4U
+
+Zlomové rozhodnutí:
+- Použít reálný vizuální základ (reference) místo syntetické aproximace
+- Odstranit hlavní objekty (mobil, UI) z hero posteru
+- Použít vyčištěnou vrstvu jako:
+  - produkční background
+  - referenční master pro další variace
+
+Výsledek:
+- Vytvořen background odpovídající cílovému stylu:
+  - bohatý bokeh
+  - správná barevnost
+  - hloubka
+  - jemná „emoční mlha“
+- Výstup schválen pro PRODUKCI
+
+Rozhodnutí:
+- Background z této fáze bude použit v produkci
+- Další iterace proběhnou v novém chatu (oddělení LAB / PROD)
+
+Stav:
+- FÁZE UZAVŘENA
+- Vizuální směr potvrzen
+- Technické generování pozadí zůstává LAB experiment
+
+--------------------------------------------------
+--------------------------------------------------
+📌 POZNÁMKY
+--------------------------------------------------
+- Tento dokument je historický.
+- Neslouží jako backlog ani bug list.
+- Slouží k pochopení rozhodnutí v čase.
+- Pokud se něco zdá „zbytečně složité“,
+  odpověď je často tady.
+-doplněna struktura assets pro zpřesnění dokumentace
+
+
+
+--------------------------------------------------
+
+--------------------------------------------------
+🌌 FÁZE 9 – HERO BACKGROUND PROD INTEGRACE + PŘECHODY SEKCE
+--------------------------------------------------
+(2026-01-24)
+
+- Nasazen produkční hero background: `purple-bg-4k.png` (4K PNG) jako jednotný globální základ.
+- Ladění vzhledu pouze přes CSS (bez editace obrázku):
+  - tmavší „cinematic“ grading
+  - zvýšení kontrastu pro “crispy” dojem (bez mlhy)
+  - odstranění možného blur efektu z `background-attachment: fixed` (přepnuto na scroll)
+- Opraven viditelný “pruh” / přechod mezi sekcemi:
+  - Hero: přidán dolní fade (Hero `::after`)
+  - Sekce: sjednocený fade nahoře i dole (`.section::before`)
+- Výsledek: plynulé přechody mezi HERO → Why → How… bez tvrdých hran a bez zásahu do CORE.
+
+
+proběhla UX explorace hero „ghost preview“ varianty A
+
+bylo ověřeno, že zásah do Homepage struktury je nežádoucí
+
+rozhodnutí: varianty se nenasazují, Homepage se vrací do stabilního stavu
+
+výsledek: UX experiment ukončen bez změny produkce
+
+stav: HOMEPAGE = STABLE, žádná otevřená akce
+
+
+🌌 FÁZE 10 – HOMEPAGE UI LAYOUT (CENTER/COMPACT) + KDY SE TO HODÍ (GRID) (2026-01-25)
+
+Proběhlo výrazné UI ladění Homepage sekcí: Proč Melody4U / Jak to funguje / Kdy se to hodí / Ukázky / Ceník.
+
+Cíl: sjednotit vizuální rytmus sekcí a zlepšit „kompaktnost“ obsahu vůči nadpisům (lepší čitelnost na velké ploše).
+
+Implementace přes styles.css (bez zásahu do homepage komponent a bez zásahu do CORE):
+
+A) Centrování obsahu pod nadpisy
+
+Přidány/laděny blokové kontejnery s max-width + margin: 0 auto pro:
+
+Why list (3 sloupce)
+
+How cards (3 kroky)
+
+Samples grid
+
+Pricing grid
+
+Nadpisy zůstaly vycentrované (text-align: center), ale proběhlo sjednocení „center bloků“ pro obsah.
+
+B) Sekce „Kdy se to hodí“ – kompaktní rozložení
+
+Sekce byla přepracována na kompaktní grid layout (cíleně 3/2 + CTA pod tím uprostřed).
+
+Odstranění vizuálního „ramečkování“ u položek a přechod na čistší „pill“ vzhled (prezentační).
+
+C) Jednotná vizuální pravidla
+
+Zachováno pravidlo: Homepage je prezentační vrstva a nesmí volat backend ani měnit CORE.
+
+Všechny změny proběhly pouze v CSS.
+
+Stav:
+
+UI je výrazně sjednocenější a čistší.
+
+Otevřená věc: drobné doladění horizontálního centrování u některých bloků (může být ovlivněno wrapperem/containery v Homepage JSX).
+
+CORE/Flow/Stripe/Share beze změny (STABLE).
+
+--------------------------------------------------
+🧾 FÁZE 11 – LEGAL & COMPLIANCE ROZHODNUTÍ
+--------------------------------------------------
+(2026-01)
+
+Důvod:
+- příprava přihlášení uživatelů
+- práce s databází osobních údajů
+- rozšíření projektu do plnohodnotné produkční služby
+
+Rozhodnutí:
+- zavést povinné právní minimum:
+  - Obchodní podmínky
+  - Ochrana osobních údajů (GDPR)
+  - Cookies
+- footer zůstává minimalistický (pouze odkazy)
+- Trust & Legal obsah zůstává součástí homepage
+
+Pravidla:
+- právní stránky jsou statické
+- nezasahují do CORE ani FLOW
+- slouží výhradně k právní ochraně projektu
+
+Stav:
+- rozhodnuto
+- čeká na implementaci textů
+
+--------------------------------------------------
+🧾 FÁZE 11 – LEGAL & COMPLIANCE IMPLEMENTACE
+--------------------------------------------------
+(2026-01)
+
+Důvod:
+- příprava přihlášení uživatelů
+- práce s databází osobních údajů
+- rozšíření projektu do plnohodnotné produkční služby
+
+Původní rozhodnutí:
+- zavést povinné právní minimum (Terms / GDPR / Cookies)
+- footer zůstává minimalistický
+- Trust & Legal zůstává součást homepage
+
+IMPLEMENTACE:
+- vytvořeny samostatné stránky:
+  - PrivacyPage.jsx (GDPR)
+  - TermsPage.jsx (Obchodní podmínky)
+  - CookiesPage.jsx (Cookies info)
+  - ContactPage.jsx (Kontakt)
+- stránky jsou statické (bez API)
+- přístupné výhradně přes footer
+
+Cookie consent:
+- přidána globální cookie lišta (CookieConsent.jsx)
+- typy cookies:
+  - nutné (always on)
+  - analytické (opt-in)
+  - marketingové (opt-in)
+- stav uložen v localStorage
+- bez souhlasu se nespouští žádná analytika
+
+Technická pravidla:
+- legal & cookies vrstva je oddělená od CORE / FLOW
+- žádný vliv na Create / Share / Playback / Stripe
+- žádná data nejsou ukládána bez vědomí uživatele
+
+Výsledek:
+- projekt je právně připraven na:
+  - login
+  - users DB
+  - analytiku
+- žádný zásah do CORE
+
+Stav:
+- IMPLEMENTOVÁNO
+- FÁZE UZAVŘENA
+🧾 FÁZE 9 – LEGAL FOOTER + COOKIES / CONSENT (PŘÍPRAVA NA LOGIN + DB)
+
+(2026-01)
+
+Důvod:
+
+Přidáváme přihlášení + databázi uživatelů → nutná právní a compliance vrstva (GDPR, podmínky, cookies).
+
+Footer musí mít jasné odkazy (minimalisticky) a vizuálně sedět s headerem.
+
+Změny / rozhodnutí:
+
+Do footeru přidány odkazy:
+
+Kontakt
+
+Podmínky (Obchodní podmínky)
+
+Ochrana dat (GDPR)
+
+Cookies
+
+Odkazy ve footeru jsou zarovnány na střed (vizuálně „jako header“ – centrovaný blok navigace).
+
+Přidání brandingu: logo Melody4U jako asset připravený pro web (React build):
+
+umístění: src/assets/hero/logo.png
+
+použití přes import (aby se zabalilo do buildu /dist a fungovalo na hostingu)
+
+Poznámka (rozpracováno / next):
+
+Cookie consent lišta (EU compliant) bude doplněna jako samostatná komponenta + stav souhlasu (minimalistický režim).
+
+Kontaktní stránka/sekce a statické stránky Podmínky/GDPR/Cookies budou navázány na routing (HashRouter).
+
+Výsledek:
+
+Footer je připraven pro produkční compliance vrstvu.
+
+Připraven podklad pro zapnutí přihlášení a práci s DB uživatelů bez právního dluhu.
+
+
+🎨 FÁZE 12 – CSS MODULARIZACE + CREATE UI SJEDNOCENÍ
+
+(2026-01-28)
+
+Důvod:
+
+Původní styles.css přerostl do neudržitelné velikosti
+
+Úpravy UI (audio player, file picker) byly rizikové
+
+Hrozilo nechtěné rozbití homepage / headeru / footeru
+
+Rozhodnutí:
+
+Zachovat styles.css pouze jako loader
+
+Rozdělit styly do logických modulů podle oblasti UI
+
+Oddělit Create-specific UI od zbytku aplikace
+
+Implementace:
+
+Vytvořena složka src/styles/
+
+Styly rozděleny do souborů:
+
+00-tokens.css – design tokens
+
+01-global.css – globální reset + background
+
+02-header-buttons.css – header, navigace, CTA
+
+03-hero-sections.css – hero + sekce
+
+04-cards-grids-pricing.css – karty, gridy, pricing
+
+05-legal-cookies-footer.css – legal, cookies, footer
+
+06-create-ui.css – Create UI (audio player, file picker)
+
+design.css – LAB / experimentální styling
+
+styles.css nyní pouze importuje výše uvedené soubory v pevném pořadí
+
+UI změny:
+
+Odstraněny nativní šedé browser prvky:
+
+<audio controls>
+
+<input type="file">
+
+Nahrazeny custom UI v Melody4U stylu
+
+Změna je UI-only, bez zásahu do CORE / FLOW
+
+Pravidla:
+
+Styly se neupravují v buildu
+
+Pořadí importů je závazné
+
+design.css nesmí ovlivnit produkční UI
+
+Stav:
+
+IMPLEMENTOVÁNO
+
+UI stabilnější, čitelnější
+
+Riziko regresí výrazně sníženo
+
+CORE beze změny (STABLE)
+
+--------------------------------------------------
+🎧 FÁZE 13 – SHAREPAGE PLAYER UI + RETRY FIX (ERR_CONNECTION_RESET) (2026-01-31)
+--------------------------------------------------
+
+Důvod:
+- SharePage používala nativní <audio controls> (šedý browser UI mimo Melody4U styl).
+- Při kliknutí na „Přehrát“ docházelo k situaci:
+  - /consume vrátil media/ticket URL
+  - request na mp3 selhal (Chrome Network: ERR_CONNECTION_RESET, často po 302 redirectu na presigned URL)
+  - FE vyhodnotil chybu jako „konec“ a hned načetl stav → UI ukázalo „vyčerpáno“
+  - uživatelsky to působilo jako okamžité spálení přehrání bez přehrávání.
+
+Změny (FE):
+- SharePage přepracována na custom Melody4U audio player (sjednocený styl s Create).
+- Přidán režim „Retry“ bez dalšího /consume:
+  - po /consume se uloží ticketUrl
+  - při chybě přehrávání se NENAČÍTÁ hned stav (neoznačuje se jako vyčerpáno)
+  - tlačítko se změní na „Zkusit znovu“ a znovu spustí přehrávání ze stejného ticketUrl
+- Stav (remaining/locked) se načítá až při reálném dokončení přehrávání (onEnded),
+  aby se zabránilo falešnému „vyčerpáno“ po síťové chybě.
+
+Poznámka:
+- Samotná síťová příčina (ERR_CONNECTION_RESET na presigned mp3) může být mimo FE (storage/redirect/headers).
+- FE fix je ochrana UX a prevence falešných stavů. CORE logika zůstává beze změny.
+
+Výsledek:
+- SharePage vypadá konzistentně se zbytkem UI (bez šedých browser prvků).
+- Při chybě streamu už uživatel nevidí okamžitě „vyčerpáno“ a může retry bez dalšího odečtu.
+- Ověřeno: po úpravě přehrávání funguje.
+
+📩 FÁZE 14 – CREATE “HOTOVO” = SDÍLENÍ (NE PLAYBACK) + ČASOVÝ NÁHLED ODESÍLATELE (2026-01-31)
+--------------------------------------------------
+
+Důvod:
+- Po vytvoření mixu (Create flow) se aplikace přepínala rovnou na obrazovku přehrání (SharePage).
+- To je špatně z pohledu produktu:
+  - po mixu chceme primárně “odeslat dárek”
+  - přehrání má být až pro PŘÍJEMCE po otevření odkazu
+- Odesílatel ale potřebuje možnost zkontrolovat, že přání je “podle představ” před odesláním.
+
+Rozhodnutí:
+1) Po úspěšném mixu a vytvoření shareId se zobrazí SHARE SCREEN (odesílatel).
+   - žádné automatické přesměrování na přehrávání
+   - CTA jsou sdílecí možnosti
+
+2) Share screen obsahuje sdílecí kanály:
+   - kopírovat odkaz
+   - WhatsApp
+   - Facebook Messenger
+   - e-mail (mailto)
+   - (volitelně) QR kód
+   - (volitelně) “zkopírovat text zprávy” s odkazem
+
+3) Náhled pro odesílatele:
+   - časově omezený preview (např. 1 hodina)
+   - preview nesmí odečítat přehrání z play-limit
+   - preview je ochranný UX režim, aby se neobcházela hodnota tarifu
+
+Implementační poznámka:
+- Preview bude řešen tokenem (previewToken) s expirací 1 hodina
+- Token typ PREVIEW:
+  - neodečítá used_plays
+  - může být vázaný na IP/UA (minimalizace sdílení)
+- Playback pro příjemce zůstává přes /p/:id + /consume (STABLE)
+
+Výsledek:
+- UX po vytvoření přání odpovídá “teď to pošli”
+- příjemce uvidí playback až po otevření odkazu
+- odesílatel má bezpečný náhled bez “spálení” přehrání
+
+Doplnění (ověřeno v praxi):
+- Share screen (odesílatel) funguje a je použitelný jako produkční UI.
+- Sdílení je “mobile-aware”:
+  - mobil: otevírá aplikace (WhatsApp/Messenger/Telegram), e-mail přes mail app
+  - desktop: WhatsApp Web, Telegram web, e-mail volba Gmail/Outlook/Jiný
+- Uhlazené UI:
+  - odstraněny debug informace (sender link, share ID)
+  - odstraněny pracovní prvky (“Sdílet…”, “kopírovat odkaz”, “kopírovat text + odkaz”)
+  - přidán textbox pro průvodní zprávu, odkaz se přidává automaticky na konec
+  - odkaz je skrytý v “Zobrazit odkaz” (details), náhled zprávy je v “Náhled zprávy” (details)
+
+Stav:
+- Sharing UX = FUNKČNÍ A OTESTOVÁNO (desktop + mobil).
+
+FÁZE 12 – CREATE WIZARD STABILIZACE (AUDIO INPUTY) ✅
+
+Datum: 2026-02-04
+Stav: HOTOVO / FUNKČNÍ
+
+Co se opravilo
+
+Opraven krok Hlas (StepVoice): režimy Mikrofon a Soubor jsou striktně oddělené (už se samovolně nepřepínají).
+
+Při přepnutí režimu se vždy vyčistí druhá větev (mic vs file) a preview se zobrazuje jen když existuje odpovídající audio zdroj.
+
+Opraveno navázání stavů mezi parentem a krokem: CreatePage při onChangeMode nemaže voicePreviewUrl (reset/cleanup preview řeší StepVoice).
+
+Tlačítko Pokračovat je aktivní pouze pokud je hlas validně připraven (dle zvoleného režimu).
+
+Přidána / sjednocena utilita src/pages/create/lib/api.js jako jednotný zdroj pro API base URL (+ volitelně fetchJson).
+
+Dotčené soubory
+
+src/pages/create/CreatePage.jsx (onChangeMode – odstraněno mazání preview URL, sjednocení props)
+
+src/pages/create/steps/StepVoice.jsx (fix přepínání, stabilní výběr/preview)
+
+src/pages/create/steps/StepMusic.jsx (stabilní výběr hudby + preview)
+
+src/pages/create/components/AudioPreview.jsx, Stepper.jsx
+
+src/pages/create/lib/audio.js, src/pages/create/lib/api.js
+
+Poznámka / pravidlo do budoucna
+
+CreatePage při přepnutí režimu nesmí mazat voicePreviewUrl / musicPreviewUrl. Cleanup patří do StepVoice / StepMusic (zabrání návratu “samo-přepínání / nic se nevybere”).
+
+--------------------------------------------------
+🌌 FÁZE 13 – HOMEPAGE SCROLL-SNAP (POTVRZENÍ BASELINE) ✅
+--------------------------------------------------
+Datum: 2026-02-06
+Stav: UZAVŘENO / STABLE
+
+Shrnutí:
+- Potvrzeno, že Homepage má používat „přeskakování“ (scroll-snap) mezi sekcemi – je to záměrný UX prvek.
+- Po experimentech se styly (home-scrollwrap, sekce, ceník) byl stav vrácen na poslední stabilní baseline.
+- Rozhodnutí: scroll-snap se nevypíná ani nepřepisuje bez výslovného souhlasu (patří do FLOW a snadno se rozbije UX).
+
+Poučení:
+- Jakékoli ladění layoutu ceníku/sekcí dělat minimálně a vždy proti baseline (jinak vzniká cukání/opačný scroll a rozpad středu obsahu).
+- Experimenty patří do LAB, produkční Homepage se „nepřepisuje“, jen verzovaně upravuje.
+
+🧩 FÁZE 14 – CREATE ROUTING / DUPLICITY (LOKÁLNE ZMATKY, TEST NA GITHUB) ⏸️
+
+Datum: 2026-02-10
+Stav: UZAVŘENO (dočasně) / POKRAČUJEME PO TESTU NA GITHUB
+
+Shrnutí problému (lokál):
+
+Na lokále se objevovalo chování, kdy se střídal „wizard“ Create (StepVoice/StepMusic/StepFinish) a zároveň starší „legacy“ Create layout (3 sekce pod sebou).
+
+To vypadá jako kombinace duplicitních souborů / špatného importu CreatePage v routování.
+
+Výsledek: UI nebylo konzistentní a vytvářelo to dojem, že Create flow je „rozhozený“.
+
+Závazné pravidlo (architektura):
+
+Create flow má mít JEDINÝ zdroj pravdy: src/pages/create/CreatePage.jsx (default export).
+
+V src/pages/ nesmí existovat žádný další CreatePage / kopie, jinak se dřív nebo později naimportuje špatná verze (lokál/CI/produkce).
+(Pravidlo viz PROJECT_STRUCTURE)
+
+Rozhodnutí:
+
+Tento chat uzavíráme bez dalšího refaktoru na lokále.
+
+Nejprve ověříme reálné chování na GitHub buildu (CI) – abychom neřešili „lokální paralelní realitu“.
+
+Další úpravy provedeme až po ověření na GitHubu a následně push do repo.
+
+Další krok (TODO):
+
+Na lokále uklidit duplicity CreatePage (pokud existují) podle pravidel STRUCTURE.
+
+Ověřit v App.jsx, že import Create jde pouze z ./pages/create/CreatePage.jsx.
+
+Push na GitHub → ověřit build a runtime chování Create flow.
+
+Teprve potom pokračovat na knihovně hudby (Backblaze „library“ složka + endpoint pro listování).
+
+Poznámka:
+
+Stabilizace Create Wizard (audio inputy) zůstává platná a nemění se (StepVoice/StepMusic/StepFinish hotovo). 
+
+PROJECT_HISTORY_UPDATED
+
+
+LOG 2026-02-15 – Homepage sekce + vazba na 04-cards-grids-pricing.css
+
+Homepage je rozdělená přes anchor id sekce: proc, jak, kdy, ukazky, cenik (důležité pro navigaci/scroll a cílení stylů).
+
+Sekce Proč používá cards grid (grid-3 + card) a má specifickou hlavičku v kartě card-titleRow (emoji + title) + sjednocené výšky karet v rámci #proc.
+
+Sekce Ceník používá pricing + price-card včetně zvýrazněné varianty .price-card.featured (highlight hlavního plánu).
+
+DŮLEŽITÉ: Homepage.jsx neimportuje 04-cards-grids-pricing.css přímo → styly se projeví jen pokud je tento CSS soubor natažený globálně (např. přes hlavní loader / styles.css / entry import).
+
+LOG 2026-02-15 – Fix „Kdy se to hodí“ + oprava CARD scope (Homepage UI)
+
+Opraven rozbitej layout v sekci „Kdy se to hodí“: původní .pill bylo jednořádkové (white-space: nowrap, flex) a v kombinaci s pill-title + pill-desc se texty překrývaly → přepracováno na card-like pill (title nahoře, popis pod tím, bez překryvů).
+
+Zrušeno CTA tlačítko „🎵 Vytvořit přání“ v sekci #kdy (tlačítko v této sekci už nemá být).
+
+Opraveno chování „karet“: odstraněny/omezenu globální pravidla, která rozbíjela jiné sekce:
+
+.grid-3 .card už není globální pro všechny gridy → scoped jen na .how-grid .how-card (sekce „Jak to funguje“) a #proc .grid-3 .card (sekce „Proč“).
+
+min-height: 160px už není globálně na .card → platí jen pro #proc .grid-3 .card.
+
+Upravené soubory:
+
+src/pages/Homepage.jsx (odstranění CTA v #kdy)
+
+04-cards-grids-pricing.css (pill layout + scoped card pravidla)
+
+
+
+1) Zápis do historie (LOG na konec)
+
+Zkopíruj na konec PROJECT_HISTORY.txt:
+
+LOG 2026-02-15 – Ukázky přání (4 ks) + reálné MP3 přehrávání
+
+Sekce Ukázky přání rozšířena na 4 ukázky (mama, kamarád, děda 70, žena k výročí) ve stejném stylu (grid 2×2).
+
+Napojeno reálné přehrávání MP3 přes sdílený <audio> (jeden player pro všechny ukázky), přepínání Play/Pause.
+
+Ošetřeno lokální testování: na localhost se ukázky načítají z https://melody4u.com/assets, v produkci z /assets.
+
+Přidána pojistka .trim() na URL, aby se předešlo 404 kvůli nechtěným znakům (mezera/emoji) v cestě.
+
+Uložení MP3 na FORPSI: /www/assets/*.mp3 (veřejně jako /assets/*.mp3).
+--------------------------------------------------
+
+KONEC PROJECT HISTORY
+--------------------------------------------------

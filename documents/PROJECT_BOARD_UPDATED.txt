@@ -1,0 +1,205 @@
+📋 Melody4U – Project Board (UPDATED)
+
+Stav k: 24. 01. 2026
+
+🐞 BUG LIST (aktuální problémy)
+
+ŽÁDNÉ.
+
+Bug list je záměrně prázdný.
+Nové položky se zapisují pouze při výskytu reálného a reprodukovatelného problému v produkci.
+
+✓ STABLE / CORE (zamčeno – NESAHAT)
+ID	Status	Oblast	Popis / Poznámka
+M4U-STABLE-001	STABLE	CORE / FLOW	Kompletní tok: Landing → Create → Render → Share → Play. Ověřeno end-to-end.
+M4U-STABLE-002	STABLE	CORE / PLATBY	Stripe checkout + návrat + complete. Funkční, neměnit.
+M4U-STABLE-003	STABLE	CORE / SHARE	Share playback lock: server-side odečet, remaining=0 → UI lock, player nelze zneužít. OVĚŘENO.
+M4U-STABLE-004 STABLE FE / ROUTING HashRouter na produkci (FORPSI). Zakázané odkazy /create, /p/:id. Povolené Link to="/create" nebo /#/create.
+🖥 FRONTEND – HOMEPAGE (HOTOVO)
+ID	Status	Oblast	Popis
+M4U-FE-010	DONE	FE / ARCH	Homepage rozdělena do samostatných komponent (Why, How, Samples, When, Trust).
+M4U-FE-011	DONE	FE / UX	Ukázky přání = pouze demo audio (bez backendu).
+M4U-FE-012	DONE	FE / UX	Audio UX: vždy hraje pouze jedna ukázka, klik = stop / přepnutí.
+M4U-FE-013	DONE	FE / UX	Trust & Legal přesunuto z footeru do sekce „Proč Melody4U“.
+M4U-FE-014	DONE	FE / UX	Footer zjednodušen (copyright + odkazy).
+M4U-FE-016	DONE	FE / UX	Hero background: produkční asset purple-bg-4k.png + čistý „cinematic“ look (brightness/contrast) + jednotné přechody mezi sekcemi (Hero::after + Section::before).
+🟡 OTEVŘENO – NEDLOUHODOBÉ (neblokující)
+ID	Priorita	Oblast	Popis
+M4U-FE-020	P2	FE / UX	Vizuální doladění sekce „Proč Melody4U“ (spacing, ikony).
+M4U-FE-021	P2	COPY	Mikrocopy – zkrácení textů Why / How / When.
+M4U-FE-022	P3	FE	Anchor scroll z topbaru (#why, #how, #samples).
+M4U-FE-023 P1 FE / QA Přidat preflight checklist před deploy: zkontrolovat, že nikde v repo není href="/create" ani window.location="/create" (grep).
+🔵 PLÁNOVÁNO (NEXT)
+ID	Priorita	Oblast	Popis
+M4U-NEXT-030	P1	FE / UX	Create wizard – jasné kroky 1–3.
+M4U-NEXT-031	P1	FE / AUTH	Uživatelský účet (email / magic link).
+M4U-NEXT-032	P2	FE	Uživatelský profil (přání, stav členství).
+
+M4U-FE-015 – DONE
+Oblast: FE / BUILD
+Popis:
+Stabilizace App.jsx a importní struktury, oprava CI build erroru (Homepage import path).
+Poznámka: nutný technický zásah po vizuálních experimentech.
+🚫 NYNÍ NEŘEŠIT
+
+SEO
+
+vícejazyčnost
+
+admin rozhraní
+
+notifikace
+
+detailní právní texty
+
+🧭 ARCHITEKTONICKÁ PRAVIDLA
+
+Homepage = prezentační vrstva
+
+Žádná homepage sekce nesmí:
+
+volat backend
+
+měnit CORE stav
+
+Ukázky ≠ skutečné přehrávání
+
+Trust informace patří do rozhodovací fáze (Why), ne do footeru
+M4U-FE-016	DONE	FE / UX	Hero background: produkční asset purple-bg-4k.png + jednotné přechody mezi sekcemi.
+
+
+MELODY4U – PROJECT BOARD
+=======================
+
+🟢 STABLE / CORE (NEMĚNIT)
+-------------------------
+- CORE tok: Homepage → Create → Mix → Share → Play
+- Stripe logika (Free / Standard / VIP)
+- Share link + play count logika
+- Audio upload + render backend
+- Manifest projektu (locked)
+
+🟡 AKTIVNÍ / ROZPRACOVANÉ
+------------------------
+M4U-FE-021 (P1) Homepage – UI polish & layout
+- Ladění vizuální hierarchie sekcí
+- Sjednocení spacingu mezi nadpisy a obsahem
+- Čistě CSS úpravy (bez zásahu do JSX/CORE)
+
+M4U-FE-022 (P1) Homepage – „Kdy se to hodí“ sekce
+- Přechod na kompaktní grid (3 / 2 + CTA)
+- Odebrání rámečků, čistý prezentační styl
+- CTA vždy uprostřed
+
+M4U-FE-023 (P1) Homepage – centrování obsahu pod nadpisy
+- Proč Melody4U / Jak to funguje / Ukázky / Ceník
+- max-width + margin:auto sjednocení
+- Cíl: konzistentní středový layout na velkých obrazovkách
+
+🟡 OTEVŘENO – NEDLOUHODOBÉ
+-------------------------
+M4U-FE-024 (P2) Jemné doladění centrování bloků
+- Některé bloky stále opticky „ujíždí“
+- Pravděpodobně wrapper/container v Homepage JSX
+- Neřešit agresivně, jen jemné doladění
+
+🟢 HOTOVO
+---------
+- 3krokový Create flow (Hlas → Hudba → Hotovo)
+- Odebrání technických debug boxů z Create UI
+- Prezentační styl homepage bez backend vazeb
+
+🔴 ZÁMĚRNĚ NEŘEŠIT TEĎ
+---------------------
+- Kompletní redesign Homepage
+- Animace layoutu sekcí
+- A/B test textů
+
+M4U-LEGAL-040 | P1 | LEGAL / COMPLIANCE
+- Obchodní podmínky (CZ)
+- Ochrana osobních údajů (GDPR)
+- Cookies stránka
+- Cookie consent lišta (EU compliant, minimalistická)
+
+M4U-LEGAL-040 | DONE | LEGAL / COMPLIANCE
+- Obchodní podmínky (CZ)
+- Ochrana osobních údajů (GDPR)
+- Cookies stránka
+- Cookie consent lišta (EU compliant)
+
+Poznámka:
+- splněno právní minimum pro:
+  - přihlášení
+  - users DB
+  - analytiku
+- žádný zásah do CORE ani FLOW
+
+Poznámka:
+Blokuje:
+- spuštění přihlášení
+- práci s databází uživatelů
+- rozšíření analytiky
+
+Nezasahuje do CORE ani FLOW.
+[P1] Create → Share Screen (odesílatel) místo přehrávání
+-------------------------------------------------------
+Stav: TODO
+Navazuje na: CreatePage, SharePage, API /share
+
+Popis:
+- Po úspěšném namixování přání (Create flow) se aplikace NESMÍ přepnout
+  na obrazovku přehrávání.
+- Místo toho se zobrazí Share screen určený odesílateli.
+
+Obsah Share screenu:
+- Kopírovat sdílený odkaz
+- Sdílení přes WhatsApp
+- Sdílení přes Facebook Messenger
+- Sdílení přes e-mail (mailto)
+- (Volitelně) QR kód
+- (Volitelně) předpřipravený text zprávy
+
+Akceptační kritéria:
+- Autor přání nemůže na CreatePage spálit přehrání.
+- Žádné volání /consume v Create flow.
+- Přehrávání je dostupné pouze na SharePage po otevření odkazu příjemcem.
+[P1] Časově omezený náhled pro odesílatele (Owner Preview – 1h)
+--------------------------------------------------------------
+Stav: TODO
+Navazuje na: CreatePage, nový Preview endpoint, DB
+
+Popis:
+- Odesílatel musí mít možnost zkontrolovat přání po namixování,
+  aniž by došlo k odečtu přehrání příjemci.
+- Náhled je časově omezený (např. 1 hodina od vytvoření).
+
+Technické požadavky:
+- Backend generuje previewToken s expirací (TTL 1h).
+- Preview token:
+  - NEODEČÍTÁ play-limit
+  - slouží pouze pro kontrolu kvality
+- Frontend zobrazí tlačítko:
+  "Přehrát náhled (platí 1 hodinu)"
+
+Akceptační kritéria:
+- Preview lze přehrát pouze v časovém okně.
+- Po expiraci se zobrazí informace „Náhled vypršel“.
+- Preview nikdy nesnižuje počet přehrání pro příjemce.
+[P2] Rozšířené možnosti sdílení na Share screenu
+-----------------------------------------------
+Stav: BACKLOG
+
+Možnosti:
+- Telegram
+- SMS (mobilní zařízení)
+- QR kód ke stažení / zobrazení
+- Kopírování předpřipraveného textu zprávy
+
+Cíl:
+- Usnadnit a zrychlit odeslání přání
+- Zvýšit pravděpodobnost sdílení (virální efekt)
+Pravidlo:
+CreatePage slouží k vytvoření a odeslání přání.
+SharePage slouží výhradně k přehrávání příjemcem.
+
+Jakékoli přehrávání v Create flow je považováno za chybu UX.

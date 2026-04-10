@@ -1,0 +1,53 @@
+MELODY4U PROJECT FLOW (updated)
+
+Build/deploy pravidla (Forpsi)
+------------------------------
+1) Frontend build musí generovat entry soubory:
+   - /assets/index.js
+   - /assets/index.css
+
+2) Důvod:
+   - stabilní názvy odstraní problém, kdy starý index.html ukazuje na již neexistující
+     hashovaný soubor (404 /assets/index-xxxxx.js) a stránka zůstane prázdná.
+
+3) Nasazení:
+   - nahrát CELÝ obsah složky `dist/` (nejen `dist/assets/`).
+   - při deploy přepsat jak `index.html`, tak všechny soubory v `assets`.
+
+4) Kontrola po buildu:
+   - ověřit existenci:
+     - dist/index.html
+     - dist/assets/index.js
+     - dist/assets/index.css
+
+Rychlost knihovny hudby (Create / Step 2)
+-----------------------------------------
+1) Frontend používá dvouvrstvou cache knihovny:
+   - in-memory cache (běh aktuální stránky)
+   - localStorage cache (přežije reload)
+
+2) Na stránce /create se knihovna "zahřívá" hned po otevření stránky (background fetch),
+   takže při přechodu do kroku 2 bývá seznam už připravený.
+
+3) Step 2 pravidlo vykreslení:
+   - nejdřív okamžitě zobrazit cache (i když je starší),
+   - potom na pozadí stáhnout nová data z API a seznam tiše aktualizovat.
+
+4) Pokud API dočasně zlobí:
+   - uživatel dál vidí poslední známá data z cache,
+   - chybu zobrazit jen pokud není k dispozici žádná cache.
+
+Cookie consent (legislativa)
+----------------------------
+1) Cookie lišta se musí zobrazit při první návštěvě, dokud uživatel neudělí/nezamítne souhlas.
+2) Stav souhlasu je uložen do localStorage (`m4u_cookie_consent_v1`).
+3) Lišta je renderovaná globálně v layoutu, aby byla dostupná na všech stránkách.
+
+Navigace + jazykové verze
+-------------------------
+1) V headeru je pouze jedno aktivní tlačítko pro "Ukázky/Samples" (vpravo v CTA), které scrolluje na sekci `#ukazky`.
+2) Sekce ukázek na homepage musí mít ID `ukazky` (kvůli konzistentnímu scroll targetu).
+3) Web má dvě jazykové verze:
+   - CZ: `/`
+   - EN: `/en`
+4) EN routing je dostupný i pro podstránky: `/en/create`, `/en/contact`, `/en/terms`, `/en/privacy`, `/en/cookies`.
