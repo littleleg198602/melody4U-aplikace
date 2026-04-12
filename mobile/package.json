@@ -8,7 +8,8 @@
     "start:lan": "expo start --clear --lan",
     "start:localhost": "expo start --clear --localhost",
     "start:tunnel": "expo start --clear --tunnel",
-    "android": "expo start --android",
+    "android": "expo run:android",
+    "android:go": "expo start --android",
     "ios": "expo start --ios",
     "lint": "eslint . --ext .ts,.tsx"
   },
