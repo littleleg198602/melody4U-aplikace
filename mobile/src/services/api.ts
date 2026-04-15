@@ -1,4 +1,5 @@
 import { API_BASE, toAbsoluteApiUrl } from '@/services/config';
+import type { RenderRequestPayload, RenderResult } from '@/types/create';
 import type { LibraryTrack, Plan, ShareState } from '@/types/api';
 
 async function parseJson<T>(response: Response): Promise<T> {
@@ -40,6 +41,29 @@ export async function createShare(outKey: string, tier = 'free'): Promise<string
   const id = data?.created?.id || data?.id;
   if (!data?.ok || !id) throw new Error(data?.error || 'share_failed');
   return id;
+}
+
+export async function submitRenderRequest(payload: RenderRequestPayload): Promise<RenderResult> {
+  const formData = new FormData();
+
+  formData.append('file', {
+    uri: payload.voiceUri,
+    // TODO: keep extension aligned with picked file once backend validates mimetype strictly.
+    name: `voice-${Date.now()}.m4a`,
+    type: payload.voiceMime,
+  } as unknown as Blob);
+
+  const voiceKey = await uploadAudio(formData);
+  const outKey = await renderGreeting(voiceKey, payload.selectedTrack.key);
+
+  // TODO: pass greetingText to backend once /api/share supports metadata payload.
+  const shareId = await createShare(outKey, 'free');
+
+  return {
+    shareId,
+    outKey,
+    shareLink: `https://melody4u.com/#/p/${shareId}`,
+  };
 }
 
 export async function fetchShareState(shareId: string): Promise<ShareState> {
