@@ -11,16 +11,19 @@ export default function PricingScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.title}>Pricing</Text>
+      <Text style={styles.title}>Ceník</Text>
+      <Text style={styles.subtitle}>Stejná cenová logika jako na webu: Free je aktivní, placené tarify se dopojují.</Text>
+
       {plans.map((plan) => (
         <View key={plan.id} style={styles.card}>
           <Text style={styles.planName}>{plan.name}</Text>
           <Text style={styles.planPrice}>{plan.priceLabel}</Text>
           <Text style={styles.planDesc}>{plan.description}</Text>
+
           {plan.status === 'active' ? (
-            <PrimaryButton title="Use this plan" onPress={() => router.push('/create')} />
+            <PrimaryButton title="Pokračovat na Create" onPress={() => router.push('/create')} />
           ) : (
-            <Text style={styles.preparing}>This plan is preparing and not purchasable yet.</Text>
+            <Text style={styles.preparing}>Tarif je připravovaný a zatím není možné dokončit nákup.</Text>
           )}
         </View>
       ))}
@@ -30,6 +33,7 @@ export default function PricingScreen() {
 
 const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 28, fontWeight: '800' },
+  subtitle: { color: colors.textMuted, lineHeight: 20 },
   card: {
     backgroundColor: colors.panel,
     borderColor: colors.border,

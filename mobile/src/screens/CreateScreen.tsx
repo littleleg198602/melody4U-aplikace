@@ -6,27 +6,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import PrimaryButton from '@/components/PrimaryButton';
 import ScreenContainer from '@/components/ScreenContainer';
-import { submitRenderRequest, fetchLibrary } from '@/services/api';
+import { fetchLibraryWithCache, getCachedLibrary, submitRenderRequest } from '@/services/api';
 import { colors } from '@/theme/colors';
 import type { CreateFlowStep, VoiceInputMethod } from '@/types/create';
 import type { LibraryTrack } from '@/types/api';
 
-function getStepIndex(step: CreateFlowStep): number {
-  const stepMap: Record<CreateFlowStep, number> = {
-    greeting: 1,
-    voice: 2,
-    music: 3,
-    review: 4,
-    result: 5,
-  };
+const STEP_ORDER: CreateFlowStep[] = ['voice', 'music', 'finish'];
 
-  return stepMap[step];
+function getStepIndex(step: CreateFlowStep): number {
+  const index = STEP_ORDER.indexOf(step);
+  return index >= 0 ? index + 1 : STEP_ORDER.length;
 }
 
 export default function CreateScreen() {
   const router = useRouter();
 
-  const [step, setStep] = useState<CreateFlowStep>('greeting');
+  const [step, setStep] = useState<CreateFlowStep>('voice');
   const [greetingText, setGreetingText] = useState('');
 
   const [voiceMethod, setVoiceMethod] = useState<VoiceInputMethod | null>(null);
@@ -45,6 +40,23 @@ export default function CreateScreen() {
 
   const [errorState, setErrorState] = useState('');
   const [successState, setSuccessState] = useState('');
+
+  useEffect(() => {
+    void prewarmLibrary();
+  }, []);
+
+  useEffect(() => {
+    if (step === 'music' && tracks.length === 0 && !loadingTracks) {
+      void loadLibrary();
+    }
+  }, [step]);
+
+  async function prewarmLibrary() {
+    const cached = await getCachedLibrary();
+    if (cached.length > 0) {
+      setTracks(cached);
+    }
+  }
 
   function selectVoiceMethod(nextMethod: VoiceInputMethod) {
     if (voiceMethod === nextMethod) return;
@@ -67,19 +79,17 @@ export default function CreateScreen() {
     return tracks.filter((track) => `${track.title || ''} ${track.key}`.toLowerCase().includes(q));
   }, [query, tracks]);
 
-  useEffect(() => {
-    if (step !== 'music' || tracks.length > 0 || loadingTracks) return;
-    void loadLibrary();
-  }, [step]);
-
   async function loadLibrary() {
     setLoadingTracks(true);
     setErrorState('');
 
     try {
-      const data = await fetchLibrary();
-      setTracks(data);
-      setSuccessState(data.length ? `Načteno skladeb: ${data.length}.` : 'Hudební knihovna je momentálně prázdná.');
+      const data = await fetchLibraryWithCache();
+      if (data.cached.length > 0) {
+        setTracks(data.cached);
+      }
+      setTracks(data.fresh);
+      setSuccessState(data.fresh.length ? `Načteno skladeb: ${data.fresh.length}.` : 'Hudební knihovna je momentálně prázdná.');
     } catch (error) {
       setErrorState(`Chyba knihovny: ${String(error)}`);
     } finally {
@@ -166,7 +176,7 @@ export default function CreateScreen() {
   }
 
   function resetFlow() {
-    setStep('greeting');
+    setStep('voice');
     setGreetingText('');
     setVoiceMethod(null);
     setRecording(null);
@@ -181,8 +191,18 @@ export default function CreateScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.title}>Vytvořit přání</Text>
-      <Text style={styles.meta}>Krok {getStepIndex(step)} z 5</Text>
+      <Text style={styles.title}>Vytvoření přání</Text>
+      <Text style={styles.meta}>{step === 'result' ? 'Hotovo' : `Krok ${getStepIndex(step)} z ${STEP_ORDER.length}`}</Text>
+
+      {step !== 'result' ? (
+        <View style={styles.stepper}>
+          {STEP_ORDER.map((item) => (
+            <View key={item} style={[styles.stepPill, item === step && styles.stepPillActive]}>
+              <Text style={[styles.stepPillText, item === step && styles.stepPillTextActive]}>{item.toUpperCase()}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
 
       {errorState ? (
         <View style={[styles.status, styles.error]}>
@@ -196,63 +216,41 @@ export default function CreateScreen() {
         </View>
       ) : null}
 
-      {step === 'greeting' ? (
-        <View style={styles.panel}>
-          <Text style={styles.section}>Greeting message</Text>
-          <Text style={styles.helper}>Napište krátké přání, které spojíme s vaším hlasem a vybranou hudbou.</Text>
-          <TextInput
-            style={[styles.input, styles.greetingInput]}
-            placeholder="Všechno nejlepší, Aničko…"
-            placeholderTextColor={colors.textMuted}
-            value={greetingText}
-            onChangeText={setGreetingText}
-            multiline
-          />
-          <PrimaryButton title="Pokračovat na hlas" onPress={() => setStep('voice')} disabled={!greetingText.trim()} />
-        </View>
-      ) : null}
-
       {step === 'voice' ? (
         <View style={styles.panel}>
-          <Text style={styles.section}>Vyberte způsob hlasového vstupu</Text>
+          <Text style={styles.section}>Krok 1: hlas</Text>
+          <Text style={styles.helper}>Vyberte mikrofon nebo hotový audio soubor (XOR logika jako na webu).</Text>
+
           <View style={styles.row}>
-            <Pressable
-              style={[styles.choice, voiceMethod === 'record' && styles.choiceActive]}
-              onPress={() => selectVoiceMethod('record')}
-            >
+            <Pressable style={[styles.choice, voiceMethod === 'record' && styles.choiceActive]} onPress={() => selectVoiceMethod('record')}>
               <Text style={styles.choiceTitle}>Nahrát mikrofonem</Text>
               <Text style={styles.choiceMeta}>Nahrajte nové hlasové přání přímo teď.</Text>
             </Pressable>
-            <Pressable
-              style={[styles.choice, voiceMethod === 'file' && styles.choiceActive]}
-              onPress={() => selectVoiceMethod('file')}
-            >
+
+            <Pressable style={[styles.choice, voiceMethod === 'file' && styles.choiceActive]} onPress={() => selectVoiceMethod('file')}>
               <Text style={styles.choiceTitle}>Vybrat existující audio</Text>
               <Text style={styles.choiceMeta}>Použijte hlasovku, kterou už máte v telefonu.</Text>
             </Pressable>
           </View>
 
           {voiceMethod === 'record' ? (
-            <PrimaryButton
-              title={recording ? 'Zastavit nahrávání' : 'Spustit nahrávání'}
-              onPress={recording ? stopRecording : startRecording}
-              mode={recording ? 'ghost' : 'primary'}
-            />
+            <PrimaryButton title={recording ? 'Zastavit nahrávání' : 'Spustit nahrávání'} onPress={recording ? stopRecording : startRecording} mode={recording ? 'ghost' : 'primary'} />
           ) : null}
 
           {voiceMethod === 'file' ? <PrimaryButton title="Vybrat audio soubor" onPress={pickAudioFile} mode="ghost" /> : null}
 
           <Text style={styles.helper}>{selectedVoiceName ? `Vybraný hlas: ${selectedVoiceName}` : 'Zatím není vybraný hlas.'}</Text>
-
-          <PrimaryButton title="Zpět" onPress={() => setStep('greeting')} mode="ghost" />
           <PrimaryButton title="Pokračovat na hudbu" onPress={() => setStep('music')} disabled={!voiceUri} />
         </View>
       ) : null}
 
       {step === 'music' ? (
         <View style={styles.panel}>
-          <Text style={styles.section}>Vyberte hudbu z knihovny Melody4U</Text>
-          <PrimaryButton title="Načíst knihovnu znovu" onPress={loadLibrary} mode="ghost" />
+          <Text style={styles.section}>Krok 2: hudba</Text>
+          <Text style={styles.helper}>Knihovna je cacheovaná a při otevření se tiše obnovuje na pozadí.</Text>
+
+          <PrimaryButton title="Obnovit knihovnu" onPress={loadLibrary} mode="ghost" />
+
           <TextInput
             style={styles.input}
             placeholder="Hledat podle názvu"
@@ -279,46 +277,47 @@ export default function CreateScreen() {
             ListEmptyComponent={!loadingTracks ? <Text style={styles.helper}>Pro tento dotaz nebyly nalezeny skladby.</Text> : null}
           />
 
-          <PrimaryButton title="Zpět" onPress={() => setStep('voice')} mode="ghost" />
-          <PrimaryButton title="Pokračovat na kontrolu" onPress={() => setStep('review')} disabled={!selectedTrack} />
+          <PrimaryButton title="Zpět na hlas" onPress={() => setStep('voice')} mode="ghost" />
+          <PrimaryButton title="Pokračovat na dokončení" onPress={() => setStep('finish')} disabled={!selectedTrack} />
         </View>
       ) : null}
 
-      {step === 'review' ? (
+      {step === 'finish' ? (
         <View style={styles.panel}>
-          <Text style={styles.section}>Kontrola před renderem</Text>
+          <Text style={styles.section}>Krok 3: dokončení</Text>
+          <Text style={styles.helper}>Doplňte text přání, zkontrolujte výběr a spusťte render.</Text>
+
+          <TextInput
+            style={[styles.input, styles.greetingInput]}
+            placeholder="Všechno nejlepší, Aničko…"
+            placeholderTextColor={colors.textMuted}
+            value={greetingText}
+            onChangeText={setGreetingText}
+            multiline
+          />
 
           <View style={styles.reviewBlock}>
-            <Text style={styles.reviewLabel}>Text přání</Text>
-            <Text style={styles.reviewValue}>{greetingText}</Text>
-          </View>
-
-          <View style={styles.reviewBlock}>
-            <Text style={styles.reviewLabel}>Hlasový vstup</Text>
+            <Text style={styles.reviewLabel}>Hlas</Text>
             <Text style={styles.reviewValue}>{selectedVoiceName || 'Nevybráno'}</Text>
           </View>
 
           <View style={styles.reviewBlock}>
-            <Text style={styles.reviewLabel}>Vybraná hudba</Text>
+            <Text style={styles.reviewLabel}>Hudba</Text>
             <Text style={styles.reviewValue}>{selectedTrack?.title || selectedTrack?.key || 'Nevybráno'}</Text>
           </View>
 
-          <PrimaryButton title="Zpět" onPress={() => setStep('music')} mode="ghost" />
-          <PrimaryButton
-            title={isSubmitting ? 'Renderuji…' : 'Odeslat render'}
-            onPress={submitRender}
-            disabled={isSubmitting || !selectedTrack || !voiceUri || !greetingText.trim()}
-          />
+          <PrimaryButton title="Zpět na hudbu" onPress={() => setStep('music')} mode="ghost" />
+          <PrimaryButton title={isSubmitting ? 'Renderuji…' : 'Vyrenderovat přání'} onPress={submitRender} disabled={isSubmitting || !selectedTrack || !voiceUri || !greetingText.trim()} />
         </View>
       ) : null}
 
       {step === 'result' ? (
         <View style={styles.panel}>
-          <Text style={styles.section}>Výsledek je připraven</Text>
-          <Text style={styles.helper}>Vaše přání je hotové. Můžete ho hned sdílet.</Text>
+          <Text style={styles.section}>Výsledek / share</Text>
+          <Text style={styles.helper}>Přání je hotové, otevřete detail nebo ho ihned sdílejte.</Text>
           <Text style={styles.link}>{shareLink}</Text>
 
-          <PrimaryButton title="Otevřít v aplikaci" onPress={() => router.push(`/share/${shareId}`)} />
+          <PrimaryButton title="Přehrát výsledek" onPress={() => router.push(`/share/${shareId}`)} />
           <PrimaryButton title="Otevřít deep link" onPress={() => Linking.openURL(`melody4u://share/${shareId}`)} mode="ghost" />
           <PrimaryButton title="Sdílet odkaz" onPress={shareResultLink} mode="ghost" />
           <PrimaryButton title="Vytvořit další přání" onPress={resetFlow} mode="ghost" />
@@ -331,6 +330,25 @@ export default function CreateScreen() {
 const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 28, fontWeight: '800' },
   meta: { color: colors.textMuted },
+  stepper: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  stepPill: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    backgroundColor: colors.panel,
+  },
+  stepPillActive: {
+    borderColor: colors.accent,
+    backgroundColor: colors.panelAlt,
+  },
+  stepPillText: { color: colors.textMuted, fontSize: 12, fontWeight: '700' },
+  stepPillTextActive: { color: colors.accent },
   panel: {
     backgroundColor: colors.panel,
     borderRadius: 14,
