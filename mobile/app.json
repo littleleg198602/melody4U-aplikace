@@ -1,12 +1,17 @@
 {
   "expo": {
     "name": "Melody4U",
-    "slug": "melody4u-mobile",
+    "slug": "melody4u-mobile-2026",
     "scheme": "melody4u",
     "version": "1.0.0",
     "orientation": "portrait",
-    "platforms": ["ios", "android"],
-    "assetBundlePatterns": ["**/*"],
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.melody4u.mobile"
@@ -14,7 +19,9 @@
     "android": {
       "package": "com.melody4u.mobile"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router"
+    ],
     "experiments": {
       "typedRoutes": true
     }
