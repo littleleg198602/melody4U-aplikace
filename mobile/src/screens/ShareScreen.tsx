@@ -11,7 +11,7 @@ export default function ShareScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const shareId = useMemo(() => String(id || ''), [id]);
 
-  const [status, setStatus] = useState('Loading share state...');
+  const [status, setStatus] = useState('Načítám stav sdílení…');
   const [remainingPlays, setRemainingPlays] = useState<number | null>(null);
   const [locked, setLocked] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -22,7 +22,7 @@ export default function ShareScreen() {
     void loadShareState();
     return () => {
       if (sound) {
-        sound.unloadAsync();
+        void sound.unloadAsync();
       }
     };
   }, [shareId]);
@@ -33,10 +33,10 @@ export default function ShareScreen() {
       setLocked(Boolean(data.locked));
       const left = data.remaining;
       setRemainingPlays(typeof left === 'number' ? left : null);
-      setStatus(data.locked ? 'Greeting is locked.' : 'Ready to play.');
+      setStatus(data.locked ? 'Přání je uzamčeno.' : 'Připraveno k přehrání.');
     } catch (error) {
-      setStatus('Cannot load share state.');
-      Alert.alert('Share error', String(error));
+      setStatus('Nepodařilo se načíst stav sdílení.');
+      Alert.alert('Chyba sdílení', String(error));
     }
   }
 
@@ -45,7 +45,7 @@ export default function ShareScreen() {
     try {
       const data = await consumeShare(shareId);
       const playable = getPlayableUrl(data);
-      if (!playable) throw new Error('No media URL from backend.');
+      if (!playable) throw new Error('Backend nevrátil URL audia.');
 
       if (sound) {
         await sound.unloadAsync();
@@ -58,10 +58,10 @@ export default function ShareScreen() {
 
       setLocked(Boolean(data.locked));
       setRemainingPlays(typeof data.remaining === 'number' ? data.remaining : null);
-      setStatus('Playing...');
+      setStatus('Přehrávání…');
     } catch (error) {
-      Alert.alert('Playback failed', String(error));
-      setStatus('Playback failed.');
+      Alert.alert('Přehrání selhalo', String(error));
+      setStatus('Přehrání selhalo.');
     } finally {
       setBusy(false);
     }
@@ -69,14 +69,14 @@ export default function ShareScreen() {
 
   return (
     <ScreenContainer>
-      <Text style={styles.title}>Greeting playback</Text>
+      <Text style={styles.title}>Sdílení / přehrání</Text>
       <View style={styles.panel}>
         <Text style={styles.label}>Share ID: {shareId || '-'}</Text>
-        <Text style={styles.label}>Status: {status}</Text>
-        {remainingPlays !== null ? <Text style={styles.label}>Remaining plays: {remainingPlays}</Text> : null}
+        <Text style={styles.label}>Stav: {status}</Text>
+        {remainingPlays !== null ? <Text style={styles.label}>Zbývající přehrání: {remainingPlays}</Text> : null}
         {busy ? <ActivityIndicator color={colors.accent} /> : null}
-        <PrimaryButton title="Refresh state" onPress={loadShareState} mode="ghost" />
-        <PrimaryButton title="Consume and play" onPress={consumeAndPlay} disabled={locked || busy || !shareId} />
+        <PrimaryButton title="Obnovit stav" onPress={loadShareState} mode="ghost" />
+        <PrimaryButton title="Přehrát" onPress={consumeAndPlay} disabled={locked || busy || !shareId} />
       </View>
     </ScreenContainer>
   );
